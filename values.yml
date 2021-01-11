@@ -89,4 +89,5 @@ profile: |
         }
     echo marketplace > /dev/sysname
     grid/reglisten -A -r description 'marketplace' tcp!*!^$port { export /tmp & } &
+    test -n $status && os pkill -9 emu-g
     echo --- end of profile loading ---
