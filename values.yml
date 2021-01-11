@@ -20,8 +20,9 @@ securityContext:
       - SYS_ADMIN
 
 service:
-  - type: ClusterIP
+    type: ClusterIP
     port: 2500
+
 description: "9minegrid-marketplace" 
 fs: |
   {% include './common.j2' %} 
@@ -59,14 +60,11 @@ fs: |
                 REPO_URL="$(cat $CACHE_FILE_NAME)"
                 REPO_NAME="$(basename $REPO_URL .git)"
                 git clone "$REPO_URL" "$REPO_NAME"
-                helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/inferno -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
+                helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/9p-execfuse-jinja2 -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
                 
         
 storage: null 
-files:
- profile:
-  path: /usr/inferno-os/lib/sh/profile 
-  data: |
+profile: |
     echo --- start of profile loading ---
     load file2chan
     load std
@@ -85,10 +83,7 @@ files:
         config =`{echo ${rget data}}]
         `{os /bin/bash -c 'mkdir -p /accounts/'^$var}
         `{os /bin/bash -c 'echo '^$config^' | base64 -d > /accounts/'^$var^'/config'}
-        hoster=`{os /bin/bash -c 'yq r /accounts/'^$var^'/config clusters[0].name'}
-        echo $hoster > /dev/sysname
         echo porf of configured kubectl: $fs_port 
-        echo connection string is: tcp!^$hoster^!^$fs_port
         grid/reglisten -A -r description 'user id is '^$var tcp!*!^$fs_port { export /host/execfuse-fs/^$var & } &
         fs_port=${expr $fs_port 1 +}
         }
