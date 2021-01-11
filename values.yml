@@ -1,0 +1,97 @@
+replicaCount: 1
+
+image: 
+  repository: 9mine/9minegrid-marketplace
+  tag: "main"
+  pullPolicy: Always
+
+initContainerImage:
+  repository: 9mine/execfuse-jinja2
+  tag: "master"
+  pullPolicy: Always
+
+serviceAccount:
+  create: false
+
+securityContext: 
+  privileged: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+
+service:
+  - type: ClusterIP
+    port: 2500
+description: "9minegrid-marketplace" 
+fs: |
+  {% include './common.j2' %} 
+  fs:
+    # root
+    "/":
+      readdir: 
+        sh: ls /accounts
+      getattr:
+        sh: *dir 
+      # /<id>
+      "/[0-9]+":
+        name: id
+        readdir: 
+          list: 
+            - 9minegrid
+        getattr: 
+          sh: *dir
+        # /<id>/9minegrid
+        "/9minegrid":
+          getattr:
+            sh: *dir
+          readdir: 
+            list:
+              - install
+          # /<id>/9minegrid/install
+          "/install": 
+            getattr:
+              sh: *file
+            read_file: 
+              sh: |
+                cat /accounts/$id/out
+            write_file: 
+              sh: |
+                REPO_URL="$(cat $CACHE_FILE_NAME)"
+                REPO_NAME="$(basename $REPO_URL .git)"
+                git clone "$REPO_URL" "$REPO_NAME"
+                helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/inferno -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
+                
+        
+storage: null 
+files:
+ profile:
+  path: /usr/inferno-os/lib/sh/profile 
+  data: |
+    echo --- start of profile loading ---
+    load file2chan
+    load std
+    ndb/cs
+    test -d /tmp || mkdir -p /tmp
+    test -d /mnt/registry || mkdir -p /mnt/registry
+    mount -A tcp!registry.dev.metacoma.io!30099 /mnt/registry
+    port = 2500
+    fs_port = 2501
+    file2chan /tmp/kubectl {
+        } {
+        load mpexpr
+        var=${expr 10 rand}
+        echo new id is $var
+        echo hostname is `{os hostname}
+        config =`{echo ${rget data}}]
+        `{os /bin/bash -c 'mkdir -p /accounts/'^$var}
+        `{os /bin/bash -c 'echo '^$config^' | base64 -d > /accounts/'^$var^'/config'}
+        hoster=`{os /bin/bash -c 'yq r /accounts/'^$var^'/config clusters[0].name'}
+        echo $hoster > /dev/sysname
+        echo porf of configured kubectl: $fs_port 
+        echo connection string is: tcp!^$hoster^!^$fs_port
+        grid/reglisten -A -r description 'user id is '^$var tcp!*!^$fs_port { export /host/execfuse-fs/^$var & } &
+        fs_port=${expr $fs_port 1 +}
+        }
+    echo marketplace > /dev/sysname
+    grid/reglisten -A -r description 'marketplace' tcp!*!^$port { export /tmp & } &
+    echo --- end of profile loading ---
