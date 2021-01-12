@@ -23,6 +23,10 @@ service:
     type: ClusterIP
     port: 2500
 
+ClusterIPRange:
+    from: 2501
+    to: 2530
+
 description: "9minegrid-marketplace" 
 fs: |
   {% include './common.j2' %} 
@@ -62,32 +66,33 @@ fs: |
                 git clone "$REPO_URL" "$REPO_NAME"
                 helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/9p-execfuse-jinja2 -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
                 
-        
-storage: null 
 profile: |
     echo --- start of profile loading ---
     load file2chan
     load std
     ndb/cs
+    for host_var in `{ os env } { '{'$host_var'}' }
     test -d /tmp || mkdir -p /tmp
     test -d /mnt/registry || mkdir -p /mnt/registry
-    mount -A tcp!registry.dev.metacoma.io!30099 /mnt/registry
-    port = 2500
-    fs_port = 2501
+    mount -A tcp!registry!registry /mnt/registry
+
+    dir = $EXPORT_PATH
+    port = $NINEP_PUBLIC_PORT
+    echo $NINEP_PUBLIC_HOST > /dev/sysname 
+    load mpexpr
+    fs_port = ${expr $NINEP_PUBLIC_PORT 1 +}
+
     file2chan /tmp/kubectl {
         } {
         load mpexpr
         var=${expr 10 rand}
         echo new id is $var
-        echo hostname is `{os hostname}
         config =`{echo ${rget data}}]
         `{os /bin/bash -c 'mkdir -p /accounts/'^$var}
         `{os /bin/bash -c 'echo '^$config^' | base64 -d > /accounts/'^$var^'/config'}
-        echo porf of configured kubectl: $fs_port 
-        grid/reglisten -A -r description 'user id is '^$var tcp!*!^$fs_port { export /host/execfuse-fs/^$var & } &
+        grid/reglisten -A -r description 'user id is '^$var tcp!*!^$fs_port { export $dir^/^$var & } &
         fs_port=${expr $fs_port 1 +}
         }
-    echo marketplace > /dev/sysname
-    grid/reglisten -A -r description 'marketplace' tcp!*!^$port { export /tmp & } &
+    grid/reglisten -A -r description ${quote $NINEP_DESCRIPTION} 'tcp!*!'^$port { export /tmp & }
     test -n $status && os pkill -9 emu-g
     echo --- end of profile loading ---
