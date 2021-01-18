@@ -1,0 +1,59 @@
+{% raw %}{% include './common.j2' %} 
+{% endraw %}
+fs:
+  # root
+  "/":
+    readdir: 
+      sh: ls /accounts
+    getattr:
+      sh: *dir 
+    # /<id>
+    "/[0-9]+":
+      name: id
+      readdir: 
+        list: 
+          - 9minegrid
+      getattr: 
+        sh: *dir
+      # /<id>/9minegrid
+      "/9minegrid":
+        getattr:
+          sh: *dir
+        readdir: 
+          list:
+            - install
+            - search
+        # /<id>/9minegrid/install
+        "/install": 
+          getattr:
+            sh: *file
+          read_file: 
+            sh: |
+              cat /accounts/$id/out
+          write_file: 
+            sh: |
+              REPO_URL="$(cat $CACHE_FILE_NAME)"
+              REPO_NAME="$(basename $REPO_URL .git)"
+              git clone "$REPO_URL" "$REPO_NAME"
+              helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/9p-execfuse-jinja2 -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
+        # /<id/9minegrid/search.include.lua
+        "/search.include.lua":
+            getattr: 
+                sh: *file
+            read_file:
+                sh: |
+                  cat <<EOF
+                  {% filter indent(20, first=True) -%}
+                  {% include 'marketplace.lua'%}
+                  {%- endfilter %}
+                  
+                  EOF
+
+        #/<id>/9minegrid/search
+        "/search":
+          cache: 9600
+          getattr:
+            sh: *file
+          read_file:
+            sh: | 
+              curl -H "Authorization: token $GITHUB_ACCESS_TOKEN" -H  "Content-Type:application/json" -d '{ "query": "{ organization(login: \"9mine\") { repositories(last: 37) { nodes { refs(refPrefix:\"refs/tags/\", last: 1, query: \"9minegrid-marketplace\") { nodes { repository { openGraphImageUrl description stargazerCount name url } } } } } } } " }' https://api.github.com/graphql | jq '[.data.organization.repositories.nodes[].refs.nodes[].repository]' 

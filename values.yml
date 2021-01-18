@@ -29,43 +29,11 @@ ClusterIPRange:
 
 description: "9minegrid-marketplace" 
 fs: |
-  {% include './common.j2' %} 
-  fs:
-    # root
-    "/":
-      readdir: 
-        sh: ls /accounts
-      getattr:
-        sh: *dir 
-      # /<id>
-      "/[0-9]+":
-        name: id
-        readdir: 
-          list: 
-            - 9minegrid
-        getattr: 
-          sh: *dir
-        # /<id>/9minegrid
-        "/9minegrid":
-          getattr:
-            sh: *dir
-          readdir: 
-            list:
-              - install
-          # /<id>/9minegrid/install
-          "/install": 
-            getattr:
-              sh: *file
-            read_file: 
-              sh: |
-                cat /accounts/$id/out
-            write_file: 
-              sh: |
-                REPO_URL="$(cat $CACHE_FILE_NAME)"
-                REPO_NAME="$(basename $REPO_URL .git)"
-                git clone "$REPO_URL" "$REPO_NAME"
-                helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/9p-execfuse-jinja2 -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
-                
+    {% filter indent(2, first=True) -%}
+    {% include 'fs.yml'%}
+    {%- endfilter %}
+
+  
 profile: |
     echo --- start of profile loading ---
     load file2chan
