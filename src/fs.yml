@@ -1,5 +1,4 @@
-{% raw %}{% include './common.j2' %} 
-{% endraw %}
+{% raw %}{% include './common.j2' %}{% endraw %}
 fs:
   # root
   "/":
@@ -43,7 +42,7 @@ fs:
             read_file:
                 sh: |
                   cat <<EOF
-                  {% filter indent(20, first=True) -%}
+{% filter indent(20, first=True) -%}
                   {% include 'marketplace.lua'%}
                   {%- endfilter %}
                   

@@ -1,0 +1,65 @@
+replicaCount: 1
+
+image: 
+  repository: 9mine/9minegrid-marketplace
+  tag: "main"
+  pullPolicy: Always
+
+initContainerImage:
+  repository: 9mine/execfuse-jinja2
+  tag: "master"
+  pullPolicy: Always
+
+serviceAccount:
+  create: false
+
+securityContext: 
+  privileged: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+
+service:
+    type: ClusterIP
+    port: 2500
+
+ClusterIPRange:
+    from: 2501
+    to: 2530
+
+description: "9minegrid-marketplace" 
+fs: |
+    {% filter indent() -%}{% include 'fs.yml'%}
+    {%- endfilter %}
+
+  
+profile: |
+    echo --- start of profile loading ---
+    load file2chan
+    load std
+    ndb/cs
+    for host_var in `{ os env } { '{'$host_var'}' }
+    test -d /tmp || mkdir -p /tmp
+    test -d /mnt/registry || mkdir -p /mnt/registry
+    mount -A tcp!registry!registry /mnt/registry
+
+    dir = $EXPORT_PATH
+    port = $NINEP_PUBLIC_PORT
+    echo $NINEP_PUBLIC_HOST > /dev/sysname 
+    load mpexpr
+    fs_port = ${expr $NINEP_PUBLIC_PORT 1 +}
+
+    file2chan /tmp/kubectl {
+        } {
+        load mpexpr
+        var=${expr 10 rand}
+        echo new id is $var
+        config =`{echo ${rget data}}]
+        `{os /bin/bash -c 'mkdir -p /accounts/'^$var}
+        `{os /bin/bash -c 'echo '^$config^' | base64 -d > /accounts/'^$var^'/config'}
+        grid/reglisten -A -r description 'user id is '^$var tcp!*!^$fs_port { export $dir^/^$var & } &
+        fs_port=${expr $fs_port 1 +}
+        }
+    grid/reglisten -A -r description ${quote $NINEP_DESCRIPTION} 'tcp!*!'^$port { export /tmp & }
+    test -n $status && os pkill -9 emu-g
+    echo --- end of profile loading ---
