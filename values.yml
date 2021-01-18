@@ -79,11 +79,24 @@ fs: |
                         -- corner will show information and than in 20 seconds will be removed 
                         function check_service_availability(conn, player_name, name, helm_hud_id)
                             local result = np_prot.file_read(conn.conn, "index")
-                            if result:find(name:gsub("^[0-9]+", "n"), 1, true) then
+                            if result:find(name:gsub("^[0-9]+", "n").. "-svc", 1, true) then
+                                local res = name:gsub("^[0-9]+", "n") .. "-svc"
+                                res = res:gsub("%-", "%%%-")
+                                res = result:match("tcp%!" .. res .. "%![0-9]+")
                                 minetest.chat_send_player(player_name,
-                                                          "Resource " .. name .. " found in registry")
+                                                          "Resource " .. minetest.formspec_escape(res)  .. " found in registry")
                                 local player = minetest.get_player_by_name(player_name)
                                 player:hud_change(helm_hud_id, "text", name .. " installed")
+                                minetest.after(2, function() 
+                                    minetest.show_formspec(player_name, "core:credentials",
+                                    table.concat({"formspec_version[4]", "size[8,6,false]",
+                                    "field[0,0;0,0;service_addr;;", minetest.formspec_escape(res) , "]",
+                                    "hypertext[0, 0.3; 8, 1;; <bigger><center>", name, "<center><bigger>]",
+                                    "field[0.5, 1.5; 7, 0.7;provider_token;Provider token;]",
+                                    "field[0.5, 2.6; 7, 0.7;cloud_id;Cloud ID;]",
+                                    "field[0.5, 3.7; 7, 0.7;folder_id;Folder ID;]",
+                                    "button[5,4.8;2.5,0.7;send;send]",    }, ""))
+                                end)
                                 minetest.after(20, function() player:hud_remove(helm_hud_id) end)
                                 return
                             end
