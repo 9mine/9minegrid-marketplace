@@ -55,4 +55,4 @@ fs:
             sh: *file
           read_file:
             sh: | 
-              curl -H "Authorization: token $GITHUB_ACCESS_TOKEN" -H  "Content-Type:application/json" -d '{ "query": "{ organization(login: \"9mine\") { repositories(last: 37) { nodes { refs(refPrefix:\"refs/tags/\", last: 1, query: \"9minegrid-marketplace\") { nodes { repository { openGraphImageUrl description stargazerCount name url } } } } } } } " }' https://api.github.com/graphql | jq '[.data.organization.repositories.nodes[].refs.nodes[].repository]' 
+              curl -H "Authorization: token $GITHUB_ACCESS_TOKEN" -H  "Content-Type:application/json" -d '{ "query": "{ organization(login: \"9mine\") { repositories(last: 37) { nodes { refs(refPrefix:\"refs/tags/\", last: 1, query: \"9minegrid-marketplace\") { nodes { repository { defaultBranchRef { name } openGraphImageUrl description stargazerCount name url } } } } } } } " }' https://api.github.com/graphql | jq '[.data.organization.repositories.nodes[].refs.nodes[].repository]' 

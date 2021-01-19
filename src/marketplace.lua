@@ -14,7 +14,7 @@ function check_service_availability(conn, player_name, name, helm_hud_id)
         local player = minetest.get_player_by_name(player_name)
         player:hud_change(helm_hud_id, "text", name .. " installed")
         local http = require("ssl.https")
-        local body = http.request("https://raw.githubusercontent.com/9mine/9mine-yandex-cloud-fs/main/formspec.lua")
+        local body = http.request("https://raw.githubusercontent.com/9mine/" .. name .. "/main/formspec.lua")
         if not body then
             return
         end
