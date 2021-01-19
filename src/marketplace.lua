@@ -1,39 +1,3 @@
--- handler for credentials 
-credentials_event = function(player, formname, fields)
-    if formname == "core:credentials" then
-        print(dump(fields))
-        if fields.quit then return end
-        if fields.send then
-            minetest.show_formspec(player_name, "core:none", table.concat(
-                                       {
-                    "formspec_version[4]", "size[8,1,false]",
-                    "hypertext[0, 0.2; 8, 1;; <bigger><center>Credentials sending . . .<center><bigger>]"
-                }, ""))
-            local player_name = player:get_player_name()
-            local conn = connections:get_connection(player_name,
-                                                    fields.service_addr, true)
-            -- token folder cloud
-            local content = table.concat(
-                                {
-                    fields.provider_token, fields.folder_id, fields.cloud_id
-                }, " ")
-            print(content)
-            pcall(np_prot.file_write, conn.conn, "yc", content)
-            minetest.show_formspec(player_name, "core:none", table.concat(
-                                       {
-                    "formspec_version[4]", "size[8,1,false]",
-                    "hypertext[0, 0.2; 8, 1;; <bigger><center>Credentials sent. Check registry<center><bigger>]"
-                }, ""))
-            minetest.after(1, function()
-                minetest.show_formspec(player_name, "core:none", "")
-            end)
-        end
-    end
-end
-
--- registrer handler for credentials form
-register.add_form_handler("core:credentials", credentials_event)
-
 -- function used to check if requested service already available 
 -- or it is in process of creation. If check fails, than next check
 -- will be made in 5 seconds. If service is present HUD in right bottom
@@ -49,20 +13,20 @@ function check_service_availability(conn, player_name, name, helm_hud_id)
                                       " found in registry")
         local player = minetest.get_player_by_name(player_name)
         player:hud_change(helm_hud_id, "text", name .. " installed")
+        local http = require("ssl.https")
+        local body = http.request("https://raw.githubusercontent.com/9mine/9mine-yandex-cloud-fs/main/formspec.lua")
+        if not body then
+            return
+        end
+        local external_form = loadstring(body)
+        local context = {
+            player_name = player_name,
+            res = res
+        }
+        setmetatable(context, { __index = _G })
+        setfenv(external_form, context)
         minetest.after(2, function()
-            minetest.show_formspec(player_name, "core:credentials",
-                                   table.concat(
-                                       {
-                    "formspec_version[4]", "size[8,6,false]",
-                    "field[0,0;0,0;service_addr;;",
-                    minetest.formspec_escape(res), "]",
-                    "hypertext[0, 0.3; 8, 1;; <bigger><center>", name,
-                    "<center><bigger>]",
-                    "field[0.5, 1.5; 7, 0.7;provider_token;Provider token;]",
-                    "field[0.5, 2.6; 7, 0.7;cloud_id;Cloud ID;]",
-                    "field[0.5, 3.7; 7, 0.7;folder_id;Folder ID;]",
-                    "button[5,4.8;2.5,0.7;send;send]"
-                }, ""))
+            external_form()
         end)
         minetest.after(1, function() player:hud_remove(helm_hud_id) end)
         return
