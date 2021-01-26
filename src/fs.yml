@@ -14,6 +14,19 @@ fs:
           - 9minegrid
       getattr: 
         sh: *dir
+      # /<id/.init.lua
+      "/.init.lua":
+          getattr: 
+            sh: *file
+          read_file:
+            sh: |
+              cat <<EOF
+{% filter indent(16, first=True) -%}
+                  {% include 'marketplace.lua'%}
+                  {%- endfilter %}
+                  
+              EOF
+
       # /<id>/9minegrid
       "/9minegrid":
         getattr:
@@ -35,19 +48,6 @@ fs:
               REPO_NAME="$(basename $REPO_URL .git)"
               git clone "$REPO_URL" "$REPO_NAME"
               helm upgrade --install "$(echo $REPO_NAME | sed 's/[0-9]\+/n/')"-svc 9mine/9p-execfuse-jinja2 -f "${REPO_NAME}/values.yml" --kubeconfig=/accounts/$id/config > /accounts/$id/out 2>&1
-        # /<id/9minegrid/search.include.lua
-        "/search.include.lua":
-            getattr: 
-                sh: *file
-            read_file:
-                sh: |
-                  cat <<EOF
-{% filter indent(20, first=True) -%}
-                  {% include 'marketplace.lua'%}
-                  {%- endfilter %}
-                  
-                  EOF
-
         #/<id>/9minegrid/search
         "/search":
           cache: 9600
