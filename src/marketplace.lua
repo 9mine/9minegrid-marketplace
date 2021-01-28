@@ -17,6 +17,7 @@ function check_service_availability(conn, player_name, name, helm_hud_id)
             return
         end
         local external_form = loadstring(body)
+        if not external_form then return end
         local context = {
             player_name = player_name,
             res = res
@@ -131,9 +132,10 @@ local function set_texture(entry, entity)
             visual = "sprite",
             textures = {"core_marketplace.png"}
         })
-        entity:get_luaentity().on_punch = function(_, player)
+        entity:get_luaentity().on_punch = function(self, player)
             local player_name = player:get_player_name()
             local player_graph = graphs:get_player_graph(player_name)
+            local entry = player_graph:get_entry(self.entry_string)
             local conn = player_graph:get_platform(common.get_platform_string(player)):get_conn()
             -- file read will return json array of objects
             -- objects represents reposities, which nave '9minegrid-marketplace' tag
@@ -151,7 +153,7 @@ local function set_texture(entry, entity)
                 -- generate string with repos names separated with commas
                 -- each value represents row in a table
                 -- download icons for repos
-                for index, repo in pairs(repos_for_k8s) do
+                for _, repo in pairs(repos_for_k8s) do
                     repos = repos == "" and repo.name or repos .. "," .. repo.name
                     texture.download(repo.openGraphImageUrl, true, repo.name .. ".png", "marketplace")
                 end
@@ -169,7 +171,6 @@ local function set_texture(entry, entity)
                         ""))
                 return
             end
-
         end
     end
 end
