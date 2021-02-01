@@ -2,7 +2,7 @@
 -- or it is in process of creation. If check fails, than next check
 -- will be made in 5 seconds. If service is present HUD in right bottom
 -- corner will show information and than in 20 seconds will be removed 
-function check_service_availability(conn, player_name, name, helm_hud_id)
+function check_service_availability(conn, player_name, name, helm_hud_id, repo_branch)
     local result = np_prot.file_read(conn.conn, "index")
     if result:find(name:gsub("^[0-9]+", "n") .. "-svc", 1, true) then
         local res = name:gsub("^[0-9]+", "n") .. "-svc"
@@ -12,7 +12,7 @@ function check_service_availability(conn, player_name, name, helm_hud_id)
         local player = minetest.get_player_by_name(player_name)
         player:hud_change(helm_hud_id, "text", name .. " installed")
         local http = require("ssl.https")
-        local body = http.request("https://raw.githubusercontent.com/9mine/" .. name .. "/main/formspec.lua")
+        local body = http.request("https://raw.githubusercontent.com/9mine/" .. name .. "/" .. repo_branch .. "/formspec.lua")
         if not body then
             return
         end
@@ -35,7 +35,7 @@ function check_service_availability(conn, player_name, name, helm_hud_id)
         return
     end
     minetest.chat_send_player(player_name, "Resource " .. name .. " not found in registry")
-    minetest.after(5, check_service_availability, conn, player_name, name, helm_hud_id)
+    minetest.after(5, check_service_availability, conn, player_name, name, helm_hud_id, repo_branch)
 end
 
 -- function for handling player interaction with forms
@@ -48,6 +48,7 @@ local marketplace = function(player, formname, fields)
         end
         local player_name = player:get_player_name()
         local repo_url = fields.url
+        local repo_branch = fields.repo_branch
         -- if pressed button 'install'
         if fields.install then
             minetest.show_formspec(player_name, "core:marketplace", "")
@@ -84,11 +85,12 @@ local marketplace = function(player, formname, fields)
                 }
             })
 
-            minetest.after(1, check_service_availability, conn, player_name, fields.repo_name, helm_hud_id)
+            minetest.after(1, check_service_availability, conn, player_name, fields.repo_name, helm_hud_id, repo_branch)
             return
         end
         local repo = ""
         local repo_idx = ""
+        local repo_branch = ""
         local repo_name = fields.repo_name
         -- get events of user interaction with table in formspec
         local event = core.explode_table_event(fields["repos"])
@@ -102,6 +104,7 @@ local marketplace = function(player, formname, fields)
             repo_idx = event.row
             repo_url = repo.url
             repo_name = repo.name
+            repo_branch = repo.defaultBranchRef.name
         end
         -- send new formspec to player with updated values
         minetest.show_formspec(player_name, "core:marketplace",
@@ -110,6 +113,7 @@ local marketplace = function(player, formname, fields)
                           "field[0,0;0,0;platform_path;;" .. minetest.formspec_escape(fields.platform_path) .. "]",
                           "field[0,0;0,0;repos_list;;" .. minetest.formspec_escape(fields.repos_list) .. "]",
                           "field[0,0;0,0;url;;" .. minetest.formspec_escape(repo_url) .. "]",
+                          "field[0,0;0,0;repo_branch;;" .. minetest.formspec_escape(repo_branch) .. "]",
                           "field[0,0;0,0;repos_for_k8s;;" .. minetest.formspec_escape(fields.repos_for_k8s) .. "]",
                           "hypertext[0, 0.2; 15.5, 1;;<bigger><center>9mine marketplace</center></bigger>]",
                           "table[0.5, 1.2; 7, 7.3;repos;" .. fields.repos_list .. ";" .. repo_idx .. "]",
