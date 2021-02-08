@@ -63,7 +63,7 @@ local marketplace = function(player, formname, fields)
             -- notify player about writing to file outcome
             minetest.chat_send_player(player_name,
                 result and "File successfully saved" or "Editing file failed: " .. response)
-            local registry_addr = common.get_env("REGISTRY_ADDR")
+            local registry_addr = common.get_env(grid_conf, "REGISTRY_ADDR")
             conn = connections:get_connection(player_name, registry_addr, true)
             local helm_hud_id = player:hud_add({
                 hud_elem_type = "text",
